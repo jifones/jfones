@@ -1,0 +1,754 @@
+# ==================== CLASE DE MACHINE LEARNING - DATA SCIENCE ================================
+
+# ======= HERRAMIENTAS ========
+#pip install pandas
+#pip install NumPy
+#pip install matplotlib
+#pip install IPython
+#pip install scikit-learn
+#pip install --upgrade tensorflow
+
+# ======= RECOMENDACIONES ========
+'''
+Dentro de Anaconda s♠e puede ir a Environments y crear un nuevo entorno para trabajar.
+Github: joanby, acá existe un repositorio llamado Collab, el que se puede importar desde la nube y usar servidores de Google.
+Jupyter: dejar todo en la nube y ver ahí mismo el resultado del código (WebApp).
+Se recomienda bajar Discord para ver el chat de Python, donde se divide en distintos temas el grupo.
+'''
+
+# ============== SECCIÓN 6 ==================
+#Data Wrangling = Cirugía de Datos
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+RUTA_CLASE = "C:/Users/jfones/Desktop/Python - CS50/Anaconda/Curso UDEMY/Machine Learning Github/datasets"
+
+data_ads = pd.read_csv(RUTA_CLASE + "/ads/Advertising.csv")
+
+data_ads["corrn"] = (data_ads["TV"] - np.mean(data_ads["TV"]))*(data_ads["Sales"] - np.mean(data_ads["Sales"])) #CORRELACIÓN ENTRE TV Y VENTAS
+data_ads["corr1"] = (data_ads["TV"] - np.mean(data_ads["TV"]))**2 #CORRELACIÓN DE LAS TVs
+data_ads["corr2"] = (data_ads["Sales"] - np.mean(data_ads["Sales"]))**2 #CORRELACIÓN DE LAS VENTAS
+
+corr_pearson = sum(data_ads["corrn"])/np.sqrt(sum(data_ads["corr1"])*sum(data_ads["corr2"]))
+#COMO corr_pearson ES POSITIVO, ESTO SIGNIFICA QUE LA TV AYUDA EN MEJORAR LAS VENTAS
+
+def corr_coef(df, var1, var2):
+    df["corrn"] = (df[var1] - np.mean(df[var1]))*(df[var2] - np.mean(df[var2]))
+    df["corr1"] = (df[var1] - np.mean(df[var1]))**2
+    df["corr2"] = (df[var2] - np.mean(df[var2]))**2
+    
+    corr_pearson = sum(df["corrn"])/np.sqrt(sum(df["corr1"])*sum(df["corr2"]))
+    return corr_pearson
+
+corr_coef(data_ads, "TV", "Sales")
+
+cols = data_ads.columns.values
+
+for x in cols:
+    for y in cols:
+        print(x + ", " + y + ": " + str(corr_coef(data_ads, x , y)))
+        
+plt.plot(data_ads["TV"], data_ads["Sales"], "ro")
+plt.title("Gastos en TV vs Ventas del Producto")
+
+data_ads.corr() #ESTO ES LO MISMO QUE TODO EL CÁLCULO DE ARRIBA, PERO PANDAS YA LA TIENE INTEGRADA..
+plt.matshow(data_ads.corr()) #VER MATRIZ DE CORRELACIÓN EN COLORES..
+
+
+# ============== SECCIÓN 7 ==================
+# MODELO DE REGRESIÓN LINEAL, Con datos simulados
+# Para los valores X, serán 100 valores distribuidos según una N(1.5, 2.5) = N("Media", "Desv. Estándar")
+# Para los valores Ye = 5 + 1.9 * X + e (error), donde error tendrá distribución N(0, 0.8)
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+x = 1.5 + 2.5*np.random.randn(100) #randn es RANDOM NORMAL
+res = 0 + 0.8*np.random.randn(100) #calcular el error con la distribución normal
+y_pred = 5 + 1.9*x 
+y_act = 5 + 1.9*x + res
+
+x_list = x.tolist()
+y_pred_list = y_pred.tolist()
+y_act_list = y_act.tolist()
+
+data = pd.DataFrame(
+    {
+     "x":x_list,
+     "y_actual":y_act_list,
+     "y_prediccion":y_pred_list
+     }
+)
+
+data.head()
+
+y_mean = [np.mean(y_act) for i in range(1, len(x_list)+1)]
+data["SSR"] = (data["y_prediccion"] - np.mean(y_act))
+data["SSD"] = (data["y_prediccion"] - y_act)
+data["SST"] = (data["y_actual"] - np.mean(y_act))
+
+SSR = sum(data["SSR"]**2)
+SSD = sum(data["SSD"]**2)
+SST = sum(data["SST"]**2)
+
+R2 = SSR/SST
+
+plt.plot(x,y_pred)
+plt.plot(x,y_act, "ro")
+plt.plot(x,y_mean, "g")
+plt.title("Valor Actual vs Predicción")
+
+#SSD: Diferencia entre el punto y la función lineal
+#SST: Diferencia entre el punto y el promedio de los datos
+#SSR: Diferencia entre la recta y el promedio de los datos
+#SST = SSR + SSD
+#R2 = SSR/SST
+
+x_mean = np.mean(data["x"])
+y_mean = np.mean(data["y_actual"])
+
+data["beta_n"] = (data["x"] - x_mean)*(data["y_actual"]-y_mean) #COVARIANZA
+data["beta_d"] = (data["x"] - x_mean)**2 #VARIANZA
+
+beta = sum(data["beta_n"])/sum(data["beta_d"])
+alpha = y_mean - beta*x_mean
+
+data["y_model"] = alpha + beta*data["x"]
+
+#RSE: Error estándar de los residuos, mientras menor sea, mejor es el modelo
+
+RSE = np.sqrt(SSD/(len(data)-2))
+
+
+
+# MODELO DE REGRESIÓN LINEAL CON DATOS CONOCIDOS
+import pandas as pd
+import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
+import numpy as np
+
+data = pd.read_csv(RUTA_CLASE + "/ads/Advertising.csv")
+
+lm = smf.ols(formula="Sales~TV", data = data).fit() #lm = Lineal Model
+lm.params
+#EL MODELO LINEAL PREDICTIVO SERÍA: Sales = 7.032594 (Valor Intercept de arriba) + 0.047537 (Valor TV de arrba) * TV
+
+lm.pvalues
+lm.rsquared #VALOR DE R2
+lm.rsquared_adj #VALOR DE R2 AJUSTADO, HACE UN PEQUEÑO AJUSTE SEGÚN LA CANTIDAD DE ELEMENTOS
+lm.summary() #RESUMEN DE TODA LA TABLA
+
+sales_prd = lm.predict(pd.DataFrame(data["TV"])) #PREDICCIÓN DE VENTAS USANDO LOS COSTOS DE TV
+
+data.plot(kind = "scatter", x = "TV", y = "Sales")
+plt.plot(pd.DataFrame(data["TV"]), sales_prd, c="red", linewidth = 2)
+
+data["sales_pred"] = 7.032594 + 0.047537*data["TV"]
+data["RSE"] = (data["Sales"] - data["sales_pred"])**2
+SSD = sum(data["RSE"])
+RSE = np.sqrt(SSD/(len(data)-2))
+
+sales_m = np.mean(data["Sales"])
+
+error_promedio = RSE/sales_m #% DEL MODELO QUE NO QUEDA EXPLICADO..
+
+plt.hist((data["Sales"] - data["sales_pred"])) #TIENE QUE TENER UNA DISTRIBUCIÓN NORMAL..
+
+
+
+
+# MODELO DE REGRESIÓN LINEAL MÚLTIPLE
+'''
+Reglas
+    - Para eliminar modelos que no aportan, hay que quitar los que tengan p-valor muy alto.
+    - Otra manera, es buscar el que aumenten más el R2. Ver si las nuevas variables incrementan este valor.
+    - Primero se elige la que tenga el menor valor residual.
+    - Python ya tiene esto incluido en algunas librerías, pero primero se hará a mano.
+'''
+
+#AÑADIR NEWSPAPER AL MODELO EXISTENTE..
+lm2 = smf.ols(formula="Sales~TV+Newspaper", data = data).fit()
+lm2.params #Función: 5.774948 + 0.046901*TV + 0.044219*Newspaper
+lm2.pvalues #A PESAR DE NO SER TAN PEQUEÑO EL DE NEWSPAPER, SIGUE SIENDO BASTANTE BAJO..
+lm2.rsquared #ES MAYOR QUE EL R2 de lm (anterior)
+
+sales_pred = lm2.predict(data[["TV", "Newspaper"]])
+SSD = sum((data["Sales"] - sales_pred)**2)
+RSE = np.sqrt(SSD/(len(data)-3)) #SE USA -3 PORQUE ES: VARIABLES PREDICTORAS + 1. RSE DISMINUYE UN POCO
+error_model_2 = RSE/sales_m #QUEDA EN 22% APROX
+
+lm2.summary() #PARA VER TODOS LOS DATOS..
+
+#DE LO ANTERIOR, SE CONCLUYE QUE AÑADIR Newspaper BENEFICIA MUY POCO AL MODELO NUEVO
+
+#VER CON LA RADIO..
+lm3 = smf.ols(formula="Sales~TV+Radio", data = data).fit()
+lm3.summary() #F-Statistic BAJA MUCHO (hasta elevado a -98) POR LO QUE DATOS DEBERÍAN SER MEJORES..
+sales_pred_3 = lm3.predict(data[["TV", "Radio"]])
+SSD = sum((data["Sales"] - sales_pred_3)**2)
+RSE = np.sqrt(SSD/(len(data)-3)) #BAJA A CASI LA MITAD DEL ANTERIOR
+error_model_3 = RSE/sales_m #QUEDA EN 12% APROX LO QUE NO SE PUEDE EXPLICAR..
+
+#VER CON LAS 3 VARIABLES
+lm4 = smf.ols(formula="Sales~TV+Radio+Newspaper", data = data).fit()
+lm4.summary() #F-Statistic SUBE CON RESPECTO AL INTERIOR, INTERVALO DE CONFIANZA TOMA EL 0, y p-valor ES CASI 1. Coef NEGATIVO DEL Newspaper
+sales_pred_4 = lm4.predict(data[["TV", "Radio", "Newspaper"]])
+SSD = sum((data["Sales"] - sales_pred_4)**2)
+RSE = np.sqrt(SSD/(len(data)-4)) #SUBE UN POCO
+error_model_4 = RSE/sales_m #QUEDA SOBRE 12%, SUBE CON RESPECTO AL ANTERIOR
+
+
+
+# == MULTICOLINEALIDAD ==
+'''
+MULTICOLINEALIDAD: VER CORRELACIÓN ENTRE UNA VARIABLE, EN COMPARACIÓN A LAS OTRAS 2 JUNTAS
+  R2 VIF = 1/(1-R2) 
+  VIF: Factor inflación de la varianza
+- VIF = 1: Las variables no están correlacionadas
+- VIF < 5: Las variables tienen una correlación moderada y se pueden quedar en el modelo
+- VIF > 5: Las variables están altamente correlacionadas y deben desaparecer del modelo
+'''
+
+# Newspaper ~ TV + Radio
+lm_n = smf.ols(formula="Newspaper~TV+Radio", data = data).fit()
+rsquared_n = lm_n.rsquared
+VIF_n = 1/(1-rsquared_n)
+
+lm_tv = smf.ols(formula="TV~Newspaper+Radio", data = data).fit()
+rsquared_tv = lm_tv.rsquared
+VIF_tv = 1/(1-rsquared_tv)
+
+lm_r = smf.ols(formula="Radio~Newspaper+TV", data = data).fit()
+rsquared_r = lm_r.rsquared
+VIF_r = 1/(1-rsquared_r)
+
+#Newspaper y Radio tienen un VIF muy parecido, por lo que están correlacionadas.
+#TV tiene un VIF igual a 1, lo que implica que no está correlacionada con las otras dos.
+
+
+# == VALIDACIÓN DE MODELO ==
+# Primero hay que dividir el dataset en conjunto de entrenamiento y de testing
+
+a = np.random.randn(len(data))
+check = (a<0.8)
+training = data[check]
+testing = data[~check]
+
+#Sales = 3.0959 + 0.0461*TV + 0.1857*Radio (Va a cambiar al ser valores random)
+
+# Validación con el conjunto de Testing
+sales_pred = lm.predict(testing)
+
+SSD = sum((testing["Sales"]-sales_pred)**2)
+RSE = np.sqrt(SSD/(len(testing)-3))
+sales_mean = np.mean(testing["Sales"])
+error = RSE/sales_mean #ERROR DEL 17,3%
+
+
+
+# ==== REGRESIÓN LINEAL CON SCIKIT ====
+from sklearn.feature_selection import RFE
+from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression
+import pandas as pd
+import numpy as np
+
+data = pd.read_csv(RUTA_CLASE + "/ads/Advertising.csv")
+
+feature_cols = ["TV", "Radio", "Newspaper"]
+X = data[feature_cols]
+Y = data["Sales"]
+
+estimator = SVR(kernel="linear") #SE LE INDICA EL TIPO DE MODELO QUE SE QUIERE CREAR
+selector = RFE(estimator, 2, step=1) #El 2 es para elegir 2 variables, y step la cantida de pasos para hacerlo
+selector = selector.fit(X,Y)
+selector.support_ #INDICA LAS VARIABLES SELECCIONADAS DE feature_cols
+selector.ranking_  #PONE LAS ELEGIDAS Y QUIENES LES SIGUEN EN ORDEN
+
+X_pred = X[["TV", "Radio"]]
+lm = LinearRegression()
+lm.fit(X_pred, Y)
+lm.intercept_
+lm.coef_
+lm.score(X_pred,Y) #VALOR DE R2
+
+
+# == TRABAJAR CON VARIABLES CATEGÓRICAS ==
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+data = pd.read_csv(RUTA_CLASE + "/ecom-expense/Ecom Expense.csv")
+
+dummy_gender = pd.get_dummies(data["Gender"], prefix = "Gender") #Separa en un nuevo dataframe la variable elegida
+dummy_city = pd.get_dummies(data["City Tier"], prefix = "City") #prefix es para darle el título el comienzo y queda con _ la variable
+
+column_names = data.columns.values.tolist()
+
+df_new = data[column_names].join(dummy_gender)
+column_names = df_new.columns.values.tolist()
+
+df_new = df_new[column_names].join(dummy_city)
+
+feature_cols = ["Monthly Income", "Transaction Time", "Gender_Female", "Gender_Male", "City_Tier 1", "City_Tier 2", "City_Tier 3"]
+#SI ES QUE SE AÑADE LA VARIABLE "Record" LOS DATOS CAMBIAN, R2 SUBE HASTA 0,92. SE PUEDE PROBAR CON LAS DISTINTAS COLUMNAS
+X = df_new[feature_cols]
+Y = df_new["Total Spend"]
+lm = LinearRegression()
+lm.fit(X,Y)
+
+list(zip(feature_cols, lm.coef_))
+lm.score(X,Y) #R2 de 0,194, BAJO - Falta información
+
+#La función quedaría de la siguiente manera: intercept + coefs*variables_elegidas
+
+df_new["prediction"] = "La función de arriba.. pero indicando la columna del dataframe" #intercept + df["col1"]*coef1 + df["col2"]*coef2....
+
+SSD = np.sum((df_new["prediction"] - df_new["Total Spend"])**2)
+RSE = np.sqrt(SSD/(len(df_new)-len(feature_cols)-1))
+sales_mean = np.mean(df_new("Total Spend"))
+error = RSE/sales_mean #DEBERÍA ENTREGAR UN ERROR DEL 13%
+
+df_new["prediction"] = lm.predict(pd.DataFrame(df_new[feature_cols])) #OTRA MANERA DE ESCRIBIR LA FÓRMULA DE ARRIBA, MÁS FÁCIL..
+
+
+# ELIMINAR VARIABLES DUMMIES REDUNDANTES
+
+dummy_gender = pd.get_dummies(data["Gender"], prefix = "Gender").iloc[:,1:]
+dummy_city = pd.get_dummies(data["City Tier"], prefix = "City").iloc[:,1:]
+df_new = data[column_names].join(dummy_gender)
+column_names = df_new[column_names].values.tolist()
+df_new = df_new[column_names].join(dummy_city)
+
+feature_cols = ["Monthly Income", "Transaction Time", "Gender_Male", "City_Tier 2", "City_Tier 3", "Record"]
+X = df_new[feature_cols]
+Y = df_new["Total Spend"]
+lm = LinearRegression()
+lm.fit(X,Y)
+
+
+
+# = TRANSFORMACIÓN DE VARIABLES PARA CONSEGUIR UNA RELACIÓN NO LINEAL =
+import pandas as pd
+import matplotlib.pyplot as plt
+
+data_auto = pd.read_csv(RUTA_CLASE + "/auto/auto-mpg.csv")
+data_auto["mpg"] = data_auto["mpg"].dropna()
+data_auto["horsepower"] = data_auto["horsepower"].dropna()
+plt.plot(data_auto["horsepower"], data_auto["mpg"], "ro")
+plt.xlabel("Caballos de Potencia")
+plt.ylabel("Consumo (millas por galeón)")
+plt.title("CV vs MPG")
+
+#Modelo de regresión lineal: mpg = a + b*horsepower
+
+X = data_auto["horsepower"].fillna(data_auto["horsepower"].mean())
+Y = data_auto["mpg"].fillna(data_auto["mpg"].mean())
+
+lm = LinearRegression()
+lm.fit(X[:, np.newaxis],Y) #Lo de la X se agrega porque LinearRegression espera una matriz (bidimensional por lo menos)
+X_data = X[:, np.newaxis]
+
+plt.plot(X,Y, "ro")
+plt.plot(X, lm.predict(X_data), color = "blue")
+lm.score(X_data,Y)
+SSD = np.sum((Y - lm.predict(X_data))**2)
+RSE = np.sqrt(SSD/(len(X_data)-1))
+y_mean = np.mean(Y)
+error = RSE/y_mean
+print(SSD, RSE, error)
+
+
+# = MODELO DE REGRESIÓN CUADRÁTICO =
+# mpg = a + b*horsepower^2
+
+X_data = X**2
+X_data = X_data[:, np.newaxis]
+lm = LinearRegression()
+lm.fit(X_data,Y)
+lm.score(X_data,Y)
+SSD = np.sum((Y - lm.predict(X_data))**2)
+RSE = np.sqrt(SSD/(len(X_data)-1))
+y_mean = np.mean(Y)
+error = RSE/y_mean
+print(SSD, RSE, y_mean, error) #R2 ES MENOR Y error ES MAYOR, POR LO QUE NO FUNCIONA PARA ESTA ESTIMACIÓN
+
+# = MODELO DE REGRESIÓN LINEAL Y CUADRÁTICO =
+# mpg = a + b*horsepower + c*horsepower^2
+
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn import linear_model
+
+poly = PolynomialFeatures(degree=2)
+X_data = poly.fit_transform(X[:,np.newaxis])
+lm = linear_model.LinearRegression()
+lm.fit(X_data, Y)
+lm.score(X_data,Y) #R2 AUMENTA EN COMPARACIÓN A LOS MODELOS ANTERIORES
+lm.intercept_ #Resultado: 55.026192447080355
+lm.coef_ #Resultado: b = -0.43404318, c = 0.00112615
+
+for d in range(2,6):
+    poly = PolynomialFeatures(degree=d)
+    X_data = poly.fit_transform(X[:,np.newaxis])
+    lm = linear_model.LinearRegression()
+    lm.fit(X_data, Y)
+    print(lm.score(X_data, Y))
+    
+    
+#EL PROBLEMA DE LOS OUTLIERS
+X = data_auto["displacement"].fillna(data_auto["displacement"].mean())
+X = X[:,np.newaxis]
+Y = data_auto["mpg"].fillna(data_auto["mpg"].mean())
+lm = LinearRegression()
+lm.fit(X,Y)
+lm.score(X,Y)
+plt.plot(X,Y, "ro")
+plt.plot(X, lm.predict(X), color = "blue")
+data_auto[(data_auto["displacement"] > 250) & (data_auto["mpg"] > 35)]
+
+data_auto_clean = data_auto.drop([395, 358, 395, 372]) #INDICES QUE SE SACAN POR SER OUTLIER, SE VE AL HACER LOS FILTROS Y VIENDO EL GRÁFICO
+
+'''
+Hay maneras de eliminar variables que tengan mucho peso en la función, para esto se puede calcular el APALANCAMIENTO.
+Leverage_i = 1/n + ( (x_i - x_prom)^2 / sumatoria(x_i - x_prom)^2 )
+Se eliminan las filas que tengan un mayor nivel de apalancamiento
+'''
+
+
+
+
+# ============== SECCIÓN 8 ==================
+
+# == REGRESIÓN LOGÍSTICA ==
+
+import pandas as pd
+
+RUTA_CLASE = "C:/Users/jfones/Desktop/Python - CS50/Anaconda/Curso UDEMY/Machine Learning Github/datasets"
+
+df = pd.read_csv(RUTA_CLASE + "/gender-purchase/Gender Purchase.csv")
+
+contingency_table = pd.crosstab(df["Gender"], df["Purchase"])
+contingency_table.sum(axis = 1) #SUMAR VALORES DE LA FILA
+contingency_table.sum(axis = 0) #SUMAR VALORES POR LA COLUMNA
+contingency_table.astype("float").div(contingency_table.sum(axis = 1), axis = 0)
+
+# Regresión desde 0..
+
+def likelihood(y, pi):
+    import numpy as np
+    total_sum = 1
+    sum_in = list(range(1, len(y)+1))
+    for i in range(len(y)):
+        sum_in[i] = np.where(y[i] == 1, pi[i], 1-pi[i])
+        total_sum = total_sum * sum_in[i]
+        return total_sum
+
+#CALCULAR LAS PROBABILIDADES PARA CADA OBSERVACIÓN
+# P_i = P(X_i) = 1/ (1 + e^(-sum{j=0 hasta k} beta_j*X_ij))
+def logitprobs(X, beta):
+    import numpy as np
+    n_rows = np.shape(X)[0]
+    n_cols = np.shape(X)[1]
+    pi = list(range(1, n_rows+1))
+    expon = list(range(1, n_rows+1))
+    for i in range(n_rows):
+        expon[i] = 0
+        for j in range(n_cols):
+            ex = X[i][j]*beta[j]
+            expon[i] = ex + expon[i]
+        with np.errstate(divide="ignore", invalid = "ignore"):
+            pi[i] = 1/(1+np.exp(-expon[i]))
+    return pi
+
+# CALCULAR LA MATRIZ DIAGONAL W
+# diag(P_i * (1- P_i)){i = 1 hasta n}
+def findW(pi):
+    import numpy as np
+    n = len(pi)
+    W = np.zeros(n*n).reshape(n,n)
+    for i in range(n):
+        print(i)
+        W[i,i] = pi[i]*(1-pi[i])
+        W[i,i].astype(float)
+    return W
+
+# OBTENER LA SOLUCIÓN DE LA FUNCIÓN LOGÍSTICA
+# beta_n+1 = beta_n - f(beta_n)/f'(beta_n)
+
+def logistics(X,Y, limit):
+    import numpy as np
+    from numpy import linalg
+    nrow = np.shape(X)[0]
+    bias = np.ones(nrow).reshape(nrow,1)
+    X_new = np.append(X, bias, axis = 1)
+    ncol = np.shape(X_new)[1]
+    beta = np.zeros(ncol).reshape(ncol,1)
+    root_dif = np.array(range(1, ncol+1)).reshape(ncol,1)
+    iter_i = 10000
+    while(iter_i > limit):
+        print(str(iter_i) + "," + str(limit))
+        pi = logitprobs(X_new, beta)
+        print(pi)
+        W = findW(pi)
+        print(W)
+        num = (np.transpose(np.matrix(X_new))*np.matrix(Y - np.transpose(pi)).transpose())
+        den = (np.matrix(np.transpose(X_new))*np.matrix(W)*np.matrix(X_new))
+        root_dif = np.array(linalg.inv(den)*num)
+        beta = beta + root_dif
+        print(beta)
+        print(iter_i)
+        iter_i = np.sum(root_dif*root_dif)
+        ll = likelihood(Y, pi)
+    return beta
+
+# COMPROBACIÓN DEL EXPERIMENTO..
+import numpy as np
+X = np.array(range(10)).reshape(10,1)
+Y = [0,0,0,0,1,0,1,0,1,1]
+bias = np.ones(10).reshape(10,1)
+X_new = np.append(X,bias,axis=1)
+
+a = logistics(X,Y,0.00001)
+
+ll = likelihood(Y, logitprobs(X,a))
+
+#Lo anterior devuelve la función Y = 0.66220827 + X -3.69557172
+
+#USANDO STATSMODELS DE PYTHON QUEDA LO SIGUIENTE:
+import statsmodels.api as sm
+logit_model = sm.Logit(Y,X_new)
+result = logit_model.fit()
+print(result.summary2()) #Coef de x1 da 0.6622, igual que el modelo anterior. Mientras que la const también se parece.
+
+
+
+#ANÁLISIS DE DATOS CON REGRESIÓN LOGÍSTICA PARA PREDICCIONES BANCARIAS:
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+RUTA_CLASE = "C:/Users/jfones/Desktop/Python - CS50/Anaconda/Curso UDEMY/Machine Learning Github/datasets"
+df = pd.read_csv(RUTA_CLASE + "/bank/bank.csv", sep = ";")
+
+df["y"] = (df["y"] == "yes").astype(int) #PASAR LOS "yes" A 1 Y LOS "no" A 0
+df["education"].unique() #PARA VER LAS DISTINTAS CLASIFICACIONES QUE HAY EN LA COLUMNA "education"
+
+df["education"] = np.where(df["education"] == "basic.4y", "Basic", df["education"])
+df["education"] = np.where(df["education"] == "basic.6y", "Basic", df["education"])
+df["education"] = np.where(df["education"] == "basic.9y", "Basic", df["education"])
+
+df["education"] = np.where(df["education"] == "high.school", "High School", df["education"])
+df["education"] = np.where(df["education"] == "professional.course", "Professional Course", df["education"])
+df["education"] = np.where(df["education"] == "university.degree", "University Degree", df["education"])
+
+df["education"] = np.where(df["education"] == "illiterate", "Illiterate", df["education"])
+df["education"] = np.where(df["education"] == "unknown", "Unknown", df["education"])
+
+df["y"].value_counts() #3.668 personas no comprar el producto, mientras que 451 sí lo hicieron.
+
+df.groupby("y").mean() #PARA VER LOS PROMEDIOS DE ACUERDO A LA GENTE QUE COMPRÓ O NO EL CRÉDITO
+df.groupby("education").mean() #VER PROMEDIOS POR NIVEL DE EDUCACIÓN
+
+# = HISTOGRAMA ENTRE COMPRAS Y NIVEL DE EDUCACIÓN =
+pd.crosstab(df.education, df.y).plot(kind="bar")
+plt.title("Frecuencia de compra en función del nivel de educación")
+plt.xlabel("Nivel de educación")
+plt.ylabel("Frecuencia de compra del producto")
+# SOLO VIENDO EL GRÁFICO, PARECIERA QUE EL NIVEL DE EDUCACIÓN SÍ IMPORTA EN LA DECISIÓN DE COMPRA..
+
+# = TABLA DE DATOS (APILADO) PARA VER EL % DE LAS PERSONAS CASADAS QUE COMPRAN O NO EL PRODUCTO =
+table = pd.crosstab(df.marital, df.y)
+table.div(table.sum(1).astype(float), axis = 0).plot(kind="bar", stacked = True)
+plt.title("Diagrama apilado de estado civil contra el nivel de compras")
+plt.xlabel("Estado Civil")
+plt.ylabel("Proporción de Clientes")
+# PARECIERA QUE NO IMPORTA MUCHO SI ESTÁN CASADOS O NO..
+
+# = FRECUENCIA DE COMPRA SEGÚN EL MES = TAMBIÉN SE PUEDE VER PARA EL DÍA DE LA SEMANA (AUNQUE PARECIERA QUE NO INFLUYE)
+pd.crosstab(df.month, df.y).plot(kind="bar")
+plt.title("Frecuencia de compra en función del día de la semana")
+plt.xlabel("Mes del Año")
+plt.ylabel("Frecuencia de compra del producto")
+
+# = CANTIDAD DE CLIENTES SEGÚN LA EDAD
+df.age.hist()
+plt.title("Histograma de la Edad")
+plt.xlabel("Edad")
+plt.ylabel("Cliente")
+
+#PARA VER POR EDAD SI ES QUE COMPRARON O NO. DONDE PARECIERA QUE GENTE MÁS JOVEN SÍ INVIERTE MÁS..
+pd.crosstab(df.age, df.y).plot(kind="bar")
+
+#PARA VER SI EN CAMPAÑAS ANTERIORES DIJERON QUE SÍ O NO, Y QUÉ DIJERON AHORA
+pd.crosstab(df.poutcome, df.y).plot(kind="bar")
+
+
+# = CONVERSIÓN DE LAS VARIABLES CATEGÓRICAS A DUMMIES =
+categories = ["job", "marital", "education", "housing", "loan", "contact", "month", "day_of_week", "poutcome"]
+
+for category in categories:
+    cat_list = "cat_" + category
+    cat_dummies = pd.get_dummies(df[category], prefix = category)
+    data_new = df.join(cat_dummies)
+    df = data_new
+
+df_vars = df.columns.values.tolist()
+to_keep = (v for v in df_vars if v not in categories)
+to_keep = (v for v in df_vars if v not in ["default"])
+bank_data = df[to_keep]
+bank_data.columns.values
+
+bank_data_vars = bank_data.columns.values.tolist()
+Y = ['y']
+X = [v for v in bank_data_vars if v not in Y]
+
+
+#SELECCIÓN DE RASGOS PARA EL MODELO
+n = 12
+
+from sklearn import datasets
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
+
+lr = LogisticRegression()
+rfe = RFE(lr, n)
+rfe = rfe.fit(bank_data[X], bank_data[Y].values.ravel())
+
+print(rfe.support_) #PARA VER LOS QUE QUEDAN DENTRO
+print(rfe.ranking_) #LAS QUE SON 1 SON LAS QUE QUEREMOS QUEDAR (DEBERÍAN SER 12 PORQUE ELEGIMOS ESTA CANTIDAD..)
+
+list(zip(bank_data_vars,rfe.support_,rfe.ranking_)) #VER LOS NOMBRES DE LAS COLUMNAS, SI ES QUE FUE ELEGIDA O NO Y EL RANKING..
+
+cols = ["euribor3m", "job_admin.", "job_blue-collar", "job_housemaid", "job_retired", "loan_yes", "month_aug", "month_dec",
+        "month_jul", "month_jun", "month_mar", "poutcome_nonexistent"]
+
+X = bank_data[cols]
+Y = bank_data["y"]
+
+
+# == IMPLEMENTAR LA REGRESIÓN LOGÍSTICA ==
+
+import statsmodels.api as sm
+logit_model = sm.Logit(Y,X)
+result = logit_model.fit()
+result.summary2() #Variable Dependiente ES LA QUE QUEREMOS PREDECIR (y). DF RESIDUAL ES #OBSERVACIONES - DATOS -1. REVISAR LOS pvalor (P>|z|), MIENTRAS MÁS PEQUEÑO SEA, MEJOR.
+
+# = IMPLEMENTAR SCIKIT LEARN PARA AJUSTAR EL MODELO =
+from sklearn import linear_model
+
+logit_model = linear_model.LogisticRegression()
+logit_model.fit(X,Y)
+
+logit_model.score(X,Y) #R2 ES DE 0,8934 POR LO QUE ES MUY ELEVADO Y DEBERÍAMOS TENER UNA BUENA PREDICCIÓN
+Y.mean() #PROMEDIO DE GENTE QUE COMPRA, QUE ES ALREDEDOR DEL 11% Y NUESTRO MODELO ES UN POCO MEJOR QUE EL PROMEDIO
+
+pd.DataFrame(list(zip(X.columns, np.transpose(logit_model.coef_)))) #PONER NOMBRE DE LA COLUMNA CON SU COEFICIENTE CORRESPONDIENTE
+
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = 0.3, random_state=0) #RANGO DEL 30%
+lm = linear_model.LogisticRegression()
+lm.fit(X_train, Y_train)
+
+probs = lm.predict_proba(X_test) #SI LA COLUMNA 2 ES MAYOR A 0.5 SE CATALOGA COMO COMPRA, Y EN CASO CONTRARIO, COMO NO COMPRA..
+
+prediction = lm.predict(X_test) #PONE UN 0 EN EL CASO DE QUE LA PROBABILIDAD SEA MENOR A 0.5
+
+prob = probs[:,1]
+prob_df = pd.DataFrame(prob)
+threshold = 0.1 #"epsilon" PARA ELEGIR EL NIVEL DE PROBABILIDAD MÍNIMO QUE VAMOS A EXIGIR, SE TOMA 0.1 YA QUE 10% COMPRA..
+prob_df["prediction"] = np.where(prob_df[0]>threshold, 1, 0) #SE CREA UNA COLUMNA DONDE CUMPLE SI LA PROBABILIDAD ES MAYOR A 0.1 (10%)
+prob_df.head()
+pd.crosstab(prob_df.prediction, columns="count") #390 POSIBLES COMPRADORES vs 846 QUE NO.. ESTO ES ALREDEDOR DE UN 30%
+
+threshold = 0.15 #LA IDEA ES TOMAR VARIOS ESCENARIOS PARA IR VIENDO EL MOVIMIENTO
+prob_df["prediction"] = np.where(prob_df[0]>threshold, 1, 0) #SE CREA UNA COLUMNA DONDE CUMPLE SI LA PROBABILIDAD ES MAYOR A 0.1 (10%)
+prob_df.head()
+pd.crosstab(prob_df.prediction, columns="count") #DISMINUYE A 312, DONDE 924 NO COMPRARÍAN..
+
+#TOMANDO UN THRESHOLD MENOR, PASARÍA LO CONTRARIO..
+
+from sklearn import metrics
+metrics.accuracy_score(Y_test, prediction) #ESTO DICE LA CANTIDAD DE CASOS QUE ACERTAMOS EN LA PREDICCIÓN..
+
+
+# == VALIDACIÓN CRUZADA ==
+from sklearn.model_selection import cross_val_score
+
+scores = cross_val_score(linear_model.LogisticRegression(), X, Y, scoring="accuracy", cv = 10)
+scores.mean() #SE OBTIENE ALREDEDOR DE UN 90%, MUY PARECIDO A LA VALIDACIÓN ANTERIOR.
+
+# IMPLEMENTACIÓN DE LAS CURVAS ROC
+
+X_train, X_test, Y_train, Y_test = train_test_split(X,Y,test_size=0.3, random_state=0)
+lm = linear_model.LogisticRegression()
+lm.fit(X_train, Y_train)
+
+probs = lm.predict_proba(X_test)
+prob = probs[:,1]
+prob_df = pd.DataFrame(prob)
+threshold = 0.1
+prob_df["prediction"] = np.where(prob_df[0] >= threshold, 1, 0)
+prob_df["actual"] = list(Y_test)
+
+confusion_matrix = pd.crosstab(prob_df.prediction, prob_df.actual) #Tabla se lee: Negativos Verdaderos |  Falsos Verdaderos / Negativos Falsos | Positivos Verdaderos
+TN = confusion_matrix[0][0]
+TP = confusion_matrix[1][1]
+FP = confusion_matrix[0][1]
+FN = confusion_matrix[1][0]
+
+sens = TP/(TP+FN) #Sensibilidad del 21%
+espc_1 = 1-TN/(TN+FP) #Especifidad es del 4,7%
+
+
+
+threshold = [0.04, 0.05, 0.07, 0.1, 0.12, 0.15, 0.18, 0.2, 0.25]
+sensitivities = [] #SE PUEDE AGREGAR EL VALOR 1 PARA QUE TERMINE EN ESTE VALOR
+especifities_1 = []
+
+for t in threshold:
+    prob_df["prediction"] = np.where(prob_df[0] >= t, 1, 0)
+    prob_df["actual"] = list(Y_test)
+    confusion_matrix = pd.crosstab(prob_df.prediction, prob_df.actual)
+    TN = confusion_matrix[0][0]
+    TP = confusion_matrix[1][1]
+    FN = confusion_matrix[0][1]
+    FP = confusion_matrix[1][0]
+    sens = TP/(TP+FN)
+    sensitivities.append(sens)
+    espc_1 = 1-TN/(TN+FP)
+    especifities_1.append(espc_1)
+
+#sensitivities.append(0) ESTO ES PARA QUE COMIENCE CON EL 0 EN EL GRÁFICO
+#especifities_1.append(0)
+
+import matplotlib.pyplot as plt
+plt.plot(especifities_1, sensitivities, marker="o", linestyle = "--", color = "r")
+x = (i*0.01 for i in range(100))
+y = (i*0.01 for i in range(100))
+plt.plot(x,y)
+plt.xlabel("1-Especifidad")
+plt.ylabel("Sensibilidad")
+plt.title("Curva ROC")
+
+#Curva ROC tiene que estar por arriba de la diagonal, ya que esto significa que la probabilidad es mejor que un 50-50. Si está por abajo, el modelo es muy malo..
+#Mientras mayor sea el área de la curva ROC, mejor es el modelo..
+
+from sklearn import metrics
+from ggplot import * #HAY QUE INSTALAR ggplot. pip install ggplot
+
+espc_1, sensit, _ = metrics.roc_curve(Y_test, prob) #Sensibilidad lo hace desde 0.01, sumando este mismo número hasta 1
+
+df = pd.DataFrame({
+    "esp": espc_1,
+    "sens": sensit
+    })
+
+ggplot(df, aes(x="esp", y = "sens")) + geom_line() + geom_abline(lineatype = "dashed") + xlim(-0.01, 1.01) + ylim(-0.01, 1.01) + xlabel("1-Especifidad") + ylabel("Otra cosa..")
+
+auc = metrics.auc(espc_1, sensit) #ESTO ES PARA CALCULAR EL ÁREA BAJO LA CURVA
+
+ggplot(df, aes(x="esp", y="sens")) + geom_area(alpha=0.25) + geom_line(aes(y="sens")) + ggtitle("Curva ROC y AUC=%s" & str(auc))
