@@ -253,6 +253,30 @@ except:
 
 
 
+# ========= DATOS CENTINELA ============
+
+enlace_centinela = "https://web.mineracentinela.cl/comunicaciones/noticias/"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_centinela)
+    ENLACE_CENTINELA = r.html.find('div[@class ="items-list clearfix"] > ul > li > div.item-title > a[@href]', first = True).attrs['href']
+    dfCentinela_Nuevo = pd.DataFrame([[ENLACE_CENTINELA]], columns = ["Noticia"])
+    dfCentinela_Existe = dfCentinela.loc[dfCentinela.Noticia.isin(dfCentinela_Nuevo.Noticia)]
+
+    if len(dfCentinela_Existe) == 0:
+        dfCentinela = dfCentinela.append(dfCentinela_Nuevo)
+        dfCentinela.reset_index(drop=True, inplace=True)
+        ULTIMO_DATO = "Noticia Centinela"
+        RUTA_INFO = ENLACE_CENTINELA
+        MAIL = ''
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL) 
+
+except:
+    pass
+
+
+
 
 #---------------------------- SALIDA -----------------------------
 
