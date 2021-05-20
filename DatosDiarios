@@ -1,0 +1,269 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Apr  8 14:52:41 2021
+
+@author: jfones
+"""
+
+#from selenium import webdriver
+#import time
+import re
+import pandas as pd
+import win32com.client as win32
+#from selenium.webdriver.chrome.options import Options
+from requests_html import HTMLSession
+from bs4 import BeautifulSoup
+import requests
+import lxml.html as html
+
+
+# ============================ IMPORTACIÓN DE DATOS ==========================
+
+RUTA_PC = 'C:/Python/Datos Diarios.xlsx'
+
+dfADUANA = pd.read_excel(RUTA_PC, sheet_name = "Aduana")
+dfADUANA_EMPRESA = pd.read_excel(RUTA_PC, sheet_name = "AduanaEmpresa")
+dfSEC = pd.read_excel(RUTA_PC, sheet_name = "SEC")
+dfCSV = pd.read_excel(RUTA_PC, sheet_name = "CSV")
+dfSBIF_APR = pd.read_excel(RUTA_PC, sheet_name = "SBIF APR")
+dfBCentral = pd.read_excel(RUTA_PC, sheet_name = "BCentral")
+dfINE_Minorista = pd.read_excel(RUTA_PC, sheet_name = "INE Minorista")
+dfTabaco = pd.read_excel(RUTA_PC, sheet_name = "Tabaco")
+
+
+# ============================ ENVIAR CORREO ==========================
+
+#FUNCION ENVIAR MAIL:
+def MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL):
+    # Mail
+    const = win32.constants
+    obj = win32.Dispatch('outlook.application')
+    mail = obj.CreateItem(0x0)
+    mail.to = 'javier.fones@bice.cl'
+    mail.cc = MAIL
+    mail.Subject = 'Nueva información de ' + ULTIMO_DATO
+    mail.HTMLBody = r"""Hola,
+    <br><br> Ha salido nueva información sobre """ + ULTIMO_DATO + """."""+"""
+    <br><br> Entra aquí para ver esta nueva información: """ + RUTA_INFO + """."""+"""
+    <br><br> Saludos,
+    <br>
+    Javier Fones
+    <br>
+    (Mail automático)"""
+    mail.Send()
+
+
+# ============================ EXTRACCIÓN DE DATOS NUEVOS ==========================
+
+# ========= ADUANA POR PRODUCTO ============
+
+enlace_aduana = "http://www.aduana.cl/exportacion-por-lugar-de-salida/aduana/2018-12-14/103453.html"
+
+try:
+    resp = requests.get(enlace_aduana)
+    parser = html.fromstring(resp.text)
+    BSoup = BeautifulSoup(resp.content, 'html.parser')
+    
+    DATO_ADUANA = BSoup.find("div", {'class' : 'CUERPO'}).findAll("p")[3].find("a").attrs['href']
+    FECHA_ADUANA = re.findall('monto_(.+).xlsx', DATO_ADUANA)[0]
+    dfAduana_Nuevo = pd.DataFrame([[FECHA_ADUANA]], columns = ["Fecha"])
+    dfAduana_Existe = dfADUANA.loc[dfADUANA.Fecha.isin(dfAduana_Nuevo.Fecha)]
+    
+    if len(dfAduana_Existe) == 0:
+        dfADUANA = dfADUANA.append(dfAduana_Nuevo)
+        dfADUANA.reset_index(drop=True, inplace=True)
+        ULTIMO_DATO = "Aduana por Producto"
+        RUTA_INFO = enlace_aduana
+        MAIL = 'javier.fones@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL)
+        
+except:
+    pass
+
+
+# ========= ADUANA POR EMPRESA ============
+
+enlace_aduana_empresa = 'https://datos.gob.cl/dataset/registro-de-exportacion-2021'
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_aduana_empresa)
+    
+    DATO_ADUANA_EMPRESA = r.html.find('span.automatic-local-datetime', first = True).text
+    FECHA_ADUANA_EMPRESA = re.findall('(.+),', DATO_ADUANA_EMPRESA)[0]
+    dfAduana_Empresa_Nuevo = pd.DataFrame([[FECHA_ADUANA_EMPRESA]], columns = ["Fecha"])
+    dfAduana_Empresa_Existe = dfADUANA_EMPRESA.loc[dfADUANA_EMPRESA.Fecha.isin(dfAduana_Empresa_Nuevo.Fecha)]    
+
+    if len(dfAduana_Empresa_Existe) == 0:
+        dfADUANA_EMPRESA = dfADUANA_EMPRESA.append(dfAduana_Empresa_Nuevo)
+        dfADUANA_EMPRESA.reset_index(drop=True, inplace=True)    
+        ULTIMO_DATO = "Aduana por Empresa"
+        RUTA_INFO = enlace_aduana_empresa
+        MAIL = 'javier.fones@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL)
+except:
+    pass
+
+
+# ========= DATOS GLP - SEC ============
+
+
+enlace_sec = "https://www.sec.cl/venta-mensual-combustibles-liquidos-y-gas-licuado-de-petroleo/"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_sec)
+    DATO_SEC = r.html.find('#C2', first = True).text
+    FECHA_SEC = re.findall('VENTAS-GLP-(.+).xlsx', DATO_SEC)[0]
+    dfSEC_Nuevo = pd.DataFrame([[FECHA_SEC]], columns = ["Fecha"])
+    dfSEC_Existe = dfSEC.loc[dfSEC.Fecha.isin(dfSEC_Nuevo.Fecha)] 
+ 
+    if len(dfSEC_Existe) == 0:
+        dfSEC = dfSEC.append(dfSEC_Nuevo)
+        dfSEC.reset_index(drop=True, inplace=True)    
+        ULTIMO_DATO = "Dato GLP Chile - SEC"
+        RUTA_INFO = enlace_sec
+        MAIL = 'javier.fones@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL)   
+ 
+except:
+    pass
+
+
+
+
+# ========= DATOS CSV MENSUAL ============
+'''
+HAY QUE HACERLO SI o SI CON SELENIUM PORQUE ES UN DATO QUE VIENE POR JAVA, POR AHORA NO ES NECESARIO TENER ESTE DATO..
+
+enlace_csv = "http://www.cmfchile.cl/institucional/estadisticas/merc_seguros/cartera_inversiones/dcisgv/descarga_cartera_inv.php?tipoentidad=CSVID"
+driver.get(enlace_csv)
+
+try:
+    DATO = driver.find_element_by_id('a_descarga').text
+    AJUSTE_FECHA = re.findall('correspondiente a (.+)', DATO)
+    FECHA_CSV = AJUSTE_FECHA[0]
+    dfNuevo = pd.DataFrame([[FECHA_CSV]], columns = ["Fecha"])
+    dfExiste4 = dfCSV.loc[dfCSV.Fecha.isin(dfNuevo.Fecha)]
+except:
+    pass
+
+if len(dfExiste4) == 0:
+    dfCSV = dfCSV.append(dfNuevo)
+    dfCSV.reset_index(drop=True, inplace=True)
+'''
+
+
+# ========= DATOS APR/GARANTÍAS ============
+
+enlace_apr = "https://www.cmfchile.cl/portal/estadisticas/617/w3-propertyvalue-43980.html"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_apr)
+
+    FECHA_APR = r.html.find('#cmf_estadisticas_grupo_group_pvid_43980 div [title]', first = False)[1].text
+    dfAPR_Nuevo = pd.DataFrame([[FECHA_APR]], columns = ["Fecha"])
+    dfAPR_Existe = dfSBIF_APR.loc[dfSBIF_APR.Fecha.isin(dfAPR_Nuevo.Fecha)]
+    
+    if len(dfAPR_Existe) == 0:
+        dfSBIF_APR = dfSBIF_APR.append(dfAPR_Nuevo)
+        dfSBIF_APR.reset_index(drop=True, inplace=True)    
+        ULTIMO_DATO = "Dato APR y Garantias de SBIF/CMF"
+        RUTA_INFO = enlace_apr
+        MAIL = 'javier.fones@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL)  
+
+except:
+    pass
+
+
+# ========= DATOS BCENTRAL SEMANAL ============
+
+enlace_bcentral = "https://si3.bcentral.cl/webcoyunturasemanal/secure/main.aspx"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_bcentral)
+    
+    FECHA_BCentral = r.html.find('#gr_ctl02_fecha5', first = True).text
+    dfBCentral_Nuevo = pd.DataFrame([[FECHA_BCentral]], columns = ["Fecha"])
+    dfBCentral_Existe = dfBCentral.loc[dfBCentral.Fecha.isin(dfBCentral_Nuevo.Fecha)]
+
+    if len(dfBCentral_Existe) == 0:
+        dfBCentral = dfBCentral.append(dfBCentral_Nuevo)
+        dfBCentral.reset_index(drop=True, inplace=True)
+        ULTIMO_DATO = "Dato BCentral Semanal"
+        RUTA_INFO = enlace_bcentral
+        MAIL = 'javier.fones@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL)
+
+except:
+    pass
+
+
+# ========= DATOS INE - VENTAS MINORISTAS ============
+
+enlace_ine = "https://www.ine.cl/estadisticas/economia/comercio-servicios-y-turismo/actividad-mensual-del-comercio"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_ine)
+    
+    DATO_INE = r.html.find('span.tituloBoletinesPdf', first = True).text
+    FECHA_INE = re.findall('[(IAC)] (.+)', DATO_INE)[0]
+    dfINE_Nuevo = pd.DataFrame([[FECHA_INE]], columns = ["Fecha"])
+    dfINE_Existe = dfINE_Minorista.loc[dfINE_Minorista.Fecha.isin(dfINE_Nuevo.Fecha)]
+
+    if len(dfINE_Existe) == 0:
+        dfINE_Minorista = dfINE_Minorista.append(dfINE_Nuevo)
+        dfINE_Minorista.reset_index(drop=True, inplace=True)
+        ULTIMO_DATO = "Dato INE - Minoristas"
+        RUTA_INFO = enlace_ine
+        MAIL = 'luis.pizarro@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL) 
+
+except:
+    pass
+
+
+# ========= DATOS BAT Chile - Precio TABACO ============
+
+enlace_tabaco = "http://www.batchile.com/group/sites/BAT_9YFD2P.nsf/vwPagesWebLive/DO9Z2G3M?opendocument"
+
+try:
+    s = HTMLSession()
+    r = s.get(enlace_tabaco)
+    ENLACE_TABACO = 'http://www.batchile.com' + r.html.find('div.primaryContent p a', first = True).attrs['href']
+    DATO_TABACO = r.html.find('div.primaryContent p a', first = True).text
+    FECHA_TABACO = re.findall('(.+).pdf', DATO_TABACO)[0]
+    dfTabaco_Nuevo = pd.DataFrame([[FECHA_TABACO]], columns = ["Fecha"])
+    dfTabaco_Existe = dfTabaco.loc[dfTabaco.Fecha.isin(dfTabaco_Nuevo.Fecha)]
+
+    if len(dfTabaco_Existe) == 0:
+        dfTabaco = dfTabaco.append(dfTabaco_Nuevo)
+        dfTabaco.reset_index(drop=True, inplace=True)
+        ULTIMO_DATO = "Dato BAT Chile - Precio Tabaco"
+        RUTA_INFO = ENLACE_TABACO
+        MAIL = 'carlos.pobletev@bice.cl; jaime.albandoz@bice.cl; javier.ramirez@bice.cl; marco.gallardo@bice.cl'
+        MailConsulta(ULTIMO_DATO, RUTA_INFO, MAIL) 
+
+except:
+    pass
+
+
+
+
+#---------------------------- SALIDA -----------------------------
+
+destination = RUTA_PC
+writer = pd.ExcelWriter(destination, engine='xlsxwriter')
+dfADUANA.to_excel(writer, sheet_name= 'Aduana', index=False)
+dfADUANA_EMPRESA.to_excel(writer, sheet_name= 'AduanaEmpresa', index=False)
+dfSEC.to_excel(writer, sheet_name= 'SEC', index=False)
+dfCSV.to_excel(writer, sheet_name= 'CSV', index=False)
+dfSBIF_APR.to_excel(writer, sheet_name= 'SBIF APR', index=False)
+dfBCentral.to_excel(writer, sheet_name= 'BCentral', index=False)
+dfINE_Minorista.to_excel(writer, sheet_name= 'INE Minorista', index=False)
+dfTabaco.to_excel(writer, sheet_name= 'Tabaco', index=False)
+writer.save()
