@@ -1,0 +1,140 @@
+import pandas as pd
+import numpy as np
+
+
+# ==================== IMPORTAR DATOS ===========================
+
+RUTA_PC = 'D:/Python/BICE/Fondo Dividendo.xlsx'
+
+dfMarketCap = pd.read_excel(RUTA_PC, sheet_name = "Market Cap")
+dfSonIGPA = pd.read_excel(RUTA_PC, sheet_name = "Son IGPA")
+dfPrecioCierre = pd.read_excel(RUTA_PC, sheet_name = "Precio Cierre") #VER SI DEJARLO O SOLO USAR Px Mensual
+dfIGPAWeight = pd.read_excel(RUTA_PC, sheet_name = "IGPA Weight")
+dfTR_Con_Div = pd.read_excel(RUTA_PC, sheet_name = "TR Con Dividendo")
+dfIPSA_IGPA = pd.read_excel(RUTA_PC, sheet_name = "IPSA-IGPA") #VER SI DEJARLO O SOLO USAR Px Mensual
+dfPxMensual = pd.read_excel(RUTA_PC, sheet_name = "Px Mensual")
+dfDividendos = pd.read_excel(RUTA_PC, sheet_name = "Dividendos")
+
+
+# =================== CALCULAR ================================
+
+dfNombresAcciones = dfSonIGPA['NOMBRE'] #SOLO LOS NOMBRES DE LAS ACCIONES
+dfIGPA_Ponderado = (dfSonIGPA.iloc[:,2:]*dfIGPAWeight.iloc[:,2:]).dropna() #COLUMNAS BP:BV DEL EXCEL
+
+
+
+# SE TOMAN LOS DIVIDENDOS DEL AÑO ANTERIOR, PARA TENER COMO INDICADOR EL RESULTADO DEL AÑO ANTERIOR..
+#CREAR TABLA DE DIVIDENDOS CON LOS PRECIOS PROMEDIOS (MENSUALES) DE CADA AÑO
+dfDivYield = pd.DataFrame() #COLUMNAS BH:BN
+i = 2014
+while i < 2021:
+    dfDivYield[i] = dfDividendos[i]/(dfPxMensual.filter(regex=str(i)).mean(axis = 1))
+    i = i + 1
+
+dfDivYield = dfDivYield[dfDivYield<100]#ELIMINAR SI ALGÚN DATO ES INFINITO..
+dfDivYield = dfDivYield.fillna('Sin info') #ELIMINAR LOS "NaN" Y DEJARLOS COMO "Sin info" (PARA DEJARLO IGUAL QUE EXCEL..)
+dfDivYield[2013] = 0
+
+dfIGPAWeight = dfIGPAWeight.fillna(0) #ELIMINAR LOS "NaN" DE IGPAWeight Y REEMPLAZARLOS CON 0
+dfTR_Con_Div = dfTR_Con_Div.fillna(0)
+
+#FÓRMULA PARA CALCULAR EL SUMAR.SI DE LA FILA 6 (COLUMNAS BP:BV) CON EL DIVIDENDO MÍNIMO EXIGIDO 
+def sumas_weight(dfDivYield, dfIGPAWeight, div_min):
+    dfIGPAWeight = dfIGPAWeight.iloc[:,2:]
+    SumasDiv = []
+    for x in dfIGPAWeight.columns.values:
+        y = x-1
+        #if y == 2013:
+            #y = 2014
+            
+        CalculoSuma = pd.concat([dfIGPAWeight[x],dfDivYield[y]], axis = 1)
+        CalculoSuma = CalculoSuma.loc[(CalculoSuma[y] != 'Sin info')]
+        CalculoSuma = CalculoSuma.loc[(CalculoSuma[y] >= div_min)]
+        Resultado = sum(CalculoSuma[x])
+        SumasDiv.append(Resultado)
+    
+    dfDivYield = dfDivYield.replace('Sin info',0)
+    dfDivYield[dfDivYield <= div_min] = 0
+    dfDivYield[dfDivYield > div_min] = 1
+    return SumasDiv, dfDivYield
+
+SumasDiv, dfDivYieldPonderador = sumas_weight(dfDivYield, dfIGPAWeight, 0.05) #EL 0 CORRESPONDE AL DIVIDENDO MÍNIMO..
+dfDivYield = dfDivYield.drop(columns=[2013])  #SE ELIMINA COLUMNA 2013 YA QUE NO NOS SIRVE..
+#dfDivYieldAjustado = dfDivYieldAjustado.drop(columns=[2013])
+#dfDivYield = dfDivYield.replace('Sin info',0) #DEJAR CON VALORES 0, VER SI DESPUÉS SE ELIMINA ANTES..
+
+#EQUAL WEIGHT
+dfSonIGPA = dfSonIGPA.fillna(0)
+ValoresWeight = 1/dfSonIGPA.iloc[:,2:].sum(axis = 0)
+
+dfEqualWeight = dfIGPAWeight.iloc[:,2:]
+
+for i in dfEqualWeight.columns.values:
+    dfEqualWeight[i] = ValoresWeight[i]
+
+
+
+#ELEGIR ENTRE EQUAL WEIGHT O IGPA WEIGHT:
+Elegir = 0
+if Elegir == 0:
+    DatoWeight = dfIGPAWeight
+elif Elegir == 1:
+    DatoWeight = dfEqualWeight
+
+
+#ESTO CONTIENE LA TABLA QUE CUMPLE CON LOS REQUISITOS ANTERIORES, Y SIRVE PARA CALCULAR EL RETORNO
+TablaFinal = pd.DataFrame()
+for i in dfDivYield.columns.values:
+    TablaFinal = pd.concat([TablaFinal,pd.DataFrame({i: dfIGPAWeight[i]/SumasDiv[i-2014]*dfDivYieldPonderador[i-1]})], axis = 1)
+TablaFinal = TablaFinal.fillna(0)
+
+
+
+#ESTO ES PARA REDISTRIBUIR EL EXCESO EN LA PONDERACIÓN, CUANDO UN EMISOR QUEDA PONDERANDO SOBRE EL 20%
+for i in TablaFinal.columns.values:
+    i = 2016
+    if TablaFinal[i].max() > 0.2:
+        print("Entró al primer if..")
+        for x in range(0,len(TablaFinal[i])):
+            if TablaFinal[i][x] > 0.2:
+                print("Encontró el valor mayor a 0.2, correspondiente a: ", TablaFinal[i][x])
+                Distribuir = (TablaFinal[i][x]-0.2)/dfDivYieldPonderador[i-1].sum()
+                print("Valor a distribuir es el siguiente: ", Distribuir)
+                TablaFinal[i][x] = 0.2
+                for y in range(0,len(TablaFinal[i])):
+                    print("Entró al segundo For..")
+                    if TablaFinal[i][y] > 0 and y != x:
+                        TablaFinal[i][y] = TablaFinal[i][y] + Distribuir
+                    
+
+
+
+Retornos = [] #OBTENER LOS RESULTADOS DEL IGPA, FILA 6 (COLUMNAS CD:CJ) Y LO QUE VA EN LA SALIDA..
+for i in dfDivYield.columns.values:
+    Retornos.append(sum((dfIGPAWeight[i]/SumasDiv[i-2014])*dfDivYieldPonderador[i-1]*dfTR_Con_Div[i]))
+
+
+'''
+div_min = 0.05
+dfIGPAWeight = dfIGPAWeight.iloc[:,2:]
+SumasDiv = []
+
+x=2015
+y = x-1
+#if y == 2013:
+    #y = 2014
+   
+CalculoSuma = pd.concat([dfIGPAWeight[x],dfDivYield[y]], axis = 1)
+CalculoSuma = CalculoSuma.loc[(CalculoSuma[y] != 'Sin info')]
+CalculoSuma = CalculoSuma.loc[(CalculoSuma[y] >= div_min)]
+Resultado = sum(CalculoSuma[x])
+SumasDiv.append(Resultado)
+
+dfDivYield = dfDivYield.replace('Sin info',0)
+dfDivYield[dfDivYield <= div_min] = 0
+dfDivYield[dfDivYield > div_min] = 1
+'''
+
+                           
+
+#sum((dfIGPAWeight[2016]/SumasDiv[2])*dfDivYieldPonderador[2015]*dfTR_Con_Div[2016])
