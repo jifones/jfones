@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May 17 12:02:43 2021
+
+@author: jifon
+"""
+
 # ==================== CLASE DE MACHINE LEARNING - DATA SCIENCE ================================
 
 # ======= HERRAMIENTAS ========
@@ -752,3 +759,717 @@ ggplot(df, aes(x="esp", y = "sens")) + geom_line() + geom_abline(lineatype = "da
 auc = metrics.auc(espc_1, sensit) #ESTO ES PARA CALCULAR EL ÁREA BAJO LA CURVA
 
 ggplot(df, aes(x="esp", y="sens")) + geom_area(alpha=0.25) + geom_line(aes(y="sens")) + ggtitle("Curva ROC y AUC=%s" & str(auc))
+
+
+
+
+
+
+# ============== SECCIÓN 9 ==================
+
+# == CLUSTERING ==
+'''
+    - Clustering: conjunto de datos o grupos homogeneos.
+    - Distancias a veces son engañosas, es mejor si se normalizan los datos para que tengan el mismo peso.
+    - La idea es separar en distintos grupos que se parezcan, o tengan una distancia parecida.
+'''
+from scipy.spatial import distance_matrix
+import pandas as pd
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+RUTA_CLASE_HOME = "D:/Python/Github/Curso UDemy/python-ml-course/datasets"
+data = pd.read_csv(RUTA_CLASE_HOME + "/movies/movies.csv", sep = ";")
+
+movies = data.columns.values.tolist()[1:] #No considero la primera columna porque no nos sirve para el ejercicio
+
+dd1 = distance_matrix(data[movies], data[movies], p=1) #Se hacen los distintos cálculos de distancia, solo para ver las diferencias
+dd2 = distance_matrix(data[movies], data[movies], p=2)
+dd10 = distance_matrix(data[movies], data[movies], p=10)
+
+def dm_to_df(dd, col_name): #Para pasar los resultados a dataframes
+    import pandas as pd
+    return pd.DataFrame(dd, index=col_name, columns=col_name)
+
+dm_to_df(dd1, data["user_id"])
+dm_to_df(dd2, data["user_id"])
+dm_to_df(dd10, data["user_id"])
+
+fig = plt.figure() #Graficar los datos de la tabla en 3D
+ax = fig.add_subplot(111, projection="3d")
+ax.scatter(xs=data["star_wars"], ys=data["lord_of_the_rings"], zs = data["harry_potter"])
+
+#CREAR A MANO EL PROCESO DEL CLUSTERING.. (SOLO DE EJEMPLO PARA ENTENDER LO QUE PASA)
+df = dm_to_df(dd1, data["user_id"])
+z = [] #Para añadir los grupos y a qué distancia
+
+df[11] = df[1] + df[10]
+df.loc[11] = df.loc[1] + df.loc[10]
+z.append([1,10, 0.7, 2]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[11][i] = min(df.loc[1][i], df.loc[10][i])
+    df.loc[i][11] = min(df.loc[i][1], df.loc[i][10])
+
+df = df.drop([1,10]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([1,10], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 2da
+x = 2
+y = 7
+n = 12
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 2]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y])
+
+df = df.drop([x,y]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 3ra
+x = 5
+y = 8
+n = 13
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 2]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y])
+
+df = df.drop([x,y]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 4to
+x = 11
+y = 13
+n = 14
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 2]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y])
+
+df = df.drop([x,y]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 5to
+x = 9
+y = 12
+m = 14
+n = 15
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 3]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i], df.loc[m][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y], df.loc[i][m])
+
+df = df.drop([x,y,m]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y,m], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 6to
+x = 4
+y = 6
+m = 15
+n = 16
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 3]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i], df.loc[m][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y], df.loc[i][m])
+
+df = df.drop([x,y,m]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y,m], axis = 1)
+
+#VOLVER A REPETIR EL PASO ANTERIOR.. 7mo
+x = 3
+y = 16
+n = 17
+
+df[n] = df[x] + df[y]
+df.loc[n] = df.loc[x] + df.loc[y]
+z.append([x,y, df.loc[x][y], 2]) #Puntos que vamos a juntar, la distancia, y la cantidad de elementos en el cluster
+
+for i in df.columns.values.tolist(): #Recorrer el df y agregar la fila 11 con los valores sw la mínima distancia con las columnas juntadas
+    df.loc[n][i] = min(df.loc[x][i], df.loc[y][i])
+    df.loc[i][n] = min(df.loc[i][x], df.loc[i][y])
+
+df = df.drop([x,y]) #Eliminar las filas y columnas que se juntaron antes (1 y 10)
+df = df.drop([x,y], axis = 1)
+
+
+# == CLUSTERING UTILIZANDO PYTHON ==
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, linkage #linkage para hacer el cluster anterior con python
+
+Z = linkage(data[movies], "ward") #El método de "ward" minimiza los cuadrados, es poco común usarlo
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma jerárquico para el Clustering")
+plt.xlabel("ID de los usuarios de Netflix")
+plt.ylabel("Distancia")
+dendrogram(Z, leaf_rotation=90.0, leaf_font_size=15.0, orientation="right") #leaf_rotation para girar los nombre en 90°, orientation para girarlo hacia la derecha..
+plt.show()
+
+Z = linkage(data[movies], "average") #El método de "average" es la distancia promedio entre los puntos
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma jerárquico para el Clustering")
+plt.xlabel("ID de los usuarios de Netflix")
+plt.ylabel("Distancia")
+dendrogram(Z, leaf_rotation=90.0, leaf_font_size=12.0) #leaf_rotation para girar los nombre en 90°, orientation para girarlo hacia la derecha..
+plt.show()
+
+Z = linkage(data[movies], "complete") #El método de "complete" toma las distancias más lejanas
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma jerárquico para el Clustering")
+plt.xlabel("ID de los usuarios de Netflix")
+plt.ylabel("Distancia")
+dendrogram(Z, leaf_rotation=90.0, leaf_font_size=12.0) #leaf_rotation para girar los nombre en 90°, orientation para girarlo hacia la derecha..
+plt.show()
+
+Z = linkage(data[movies], "simple") #El método de "simple" toma las distancias más cortas
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma jerárquico para el Clustering")
+plt.xlabel("ID de los usuarios de Netflix")
+plt.ylabel("Distancia")
+dendrogram(Z, leaf_rotation=90.0, leaf_font_size=12.0) #leaf_rotation para girar los nombre en 90°, orientation para girarlo hacia la derecha..
+plt.show()
+
+#PARA VER MÁS DETALLES DE TODO LO ANTERIOR, BUSCAR LINKAGE DE PYTHON.. https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
+
+
+# == CLUSTERING JERÁRQUICO ==
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, linkage, cophenet
+from scipy.spatial.distance import pdist
+import numpy as np
+
+np.random.seed(4711)
+a = np.random.multivariate_normal([10,0], [[3,1], [1,4]], size = [100,])
+b = np.random.multivariate_normal([0,20], [[3,1], [1,4]], size = [50,])
+X = np.concatenate((a,b))
+print(X.shape)
+plt.scatter(X[:,0], X[:,1])
+plt.show()
+
+Z = linkage(X, "ward") #se pueden usar distintos tipos de métricas, entregando otro parámetro metrics="...."
+c, coph_dist = cophenet(Z, pdist(X)) #Entrega la certeza del resultado..
+
+idx = [33,62,68]
+idx2 = [15,69.41]
+plt.figure(figsize = (10,8))
+plt.scatter(X[:,0], X[:,1]) #Pintar todos los puntos
+plt.scatter(X[idx,0], X[idx,1], c='r') #Destacar en rojo los puntos que nos interesesan ver del gráfico..
+plt.scatter(X[idx2,0], X[idx2,1], c='y') #Destacar en amarillo los puntos que nos interesesan ver del gráfico..
+plt.show()
+
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma del clustering jerárquico")
+plt.xlabel("Índices de la Muestra")
+plt.ylabel("Distancias")
+dendrogram(Z, leaf_rotation=90., leaf_font_size=8.0) #Se puede agregar el nombre de los labels, "labels = ......." y también el color_threshold = "límite" para que pinte de otro color después de X número..
+plt.show
+
+#TRUNCAR ELEMENTOS, PARA EL CASO DE QUE APAREZCAN DISTANCIAS MUY GRANDES..
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma del clustering jerárquico")
+plt.xlabel("Índices de la Muestra")
+plt.ylabel("Distancias")
+dendrogram(Z, leaf_rotation=90., leaf_font_size=8.0, color_threshold = 0.7*180, 
+           truncate_mode = "lastp", p = 10, show_leaf_counts = False, show_contracted = True) #SOLO MUESTRA LAS "p" ÚLTIMAS UNIONES.. EL RESTO LAS JUNTA..
+plt.show #show_leaf_counts = True, VA A INDICAR LA CANTIDAD DE ELEMENTOS QUE SE JUNTARON EN EL CLUSTER INDICADO..
+
+def dendrogram_tune(*args, **kwargs): #FUNCIÓN PARA GRAFICAR EL DENDROGRAMA, AGRUPADO, CON COLORES y LA INFORMACIÓN QUE NOS INTERESA..
+    max_d = kwargs.pop("max_d", None)
+    if max_d and 'color_threshold' not in kwargs:
+        kwargs['color_threshold'] = max_d
+    annotate_above = kwargs.pop('annotate_above', 0)
+    
+    ddata = dendrogram(*args,**kwargs)
+    
+    if not kwargs.get('no_plot', False):
+        plt.title("Clustering jerárquico con Dendrograma truncado")
+        plt.xlabel("Índice del Dataset (o tamaño del cluster)")
+        plt.ylabel("Distancia")
+        for index, distance, color in zip(ddata['icoord'], ddata['dcoord'], ddata['color_list']):
+            x = 0.5*sum(index[1:3])
+            y = distance[1]
+            if y > annotate_above:
+                plt.plot(x,y, 'o', c=color)
+                plt.annotate('%.3g'%y, (x,y), xytext = (0,-5), textcoords = "offset points", va = "top", ha = "center")
+                
+    if max_d:
+        plt.axhline(y=max_d, c='k')
+        
+    return ddata
+
+dendrogram_tune(Z, truncate_mode='lastp', p = 12, leaf_rotation=90., leaf_font_size = 12., show_contracted=True, annotate_above = 10, max_d = 50)
+
+
+#MÉTODO PARA ELEGIR LA CANTIDAD DE CLUSTERS QUE SE DEBERÍAN FORMAR:
+from scipy.cluster.hierarchy import inconsistent
+
+depth = 5 #Cantidad de niveles de profundidad/por debajo del cluster calculado
+incons = inconsistent(Z, depth) #Entrega el promedio, Desv. Std, Cuenta, Factor de Inconsistencia
+
+#MÉTODO DEL CODO:
+last = Z[-10:,2]
+last_rev = last[::-1] #REVERTIR LOS DATOS
+idx = np.arange(1,len(last)+1)
+plt.plot(idx, last_rev)
+
+acc = np.diff(last,2)
+acc_rev = acc[::-1] 
+plt.plot(idx[:-2]+1, acc_rev)
+plt.show()
+k = acc_rev.argmax()+2
+print("El número óptimo de cluster es %s"%str(k))
+
+
+#EJEMPLO DONDE NO FUNCIONA HACER SOLO 2 CLUSTER:
+c = np.random.multivariate_normal([40,40], [[20,1], [1,30]], size = [200,])
+d = np.random.multivariate_normal([80,80], [[30,1], [1,30]], size = [200,])
+e = np.random.multivariate_normal([0,100], [[100,1], [1,100]], size = [200,])    
+X2 = np.concatenate((X,c,d,e),)
+plt.scatter(X2[:,0], X2[:,1])
+plt.show()
+
+Z2 = linkage(X2, "ward")
+plt.figure(figsize=(10,10))
+dendrogram_tune(
+    Z2,
+    truncate_mode = "lastp",
+    p = 30,
+    leaf_rotation=90.,
+    leaf_font_size = 10.,
+    show_contracted = True,
+    annotate_above = 40,
+    max_d = 170
+    )
+plt.show()
+
+last = Z2[-10:,2]
+last_rev = last[::-1] #REVERTIR LOS DATOS
+idx = np.arange(1,len(last)+1)
+plt.plot(idx, last_rev)
+
+acc = np.diff(last,2)
+acc_rev = acc[::-1] 
+plt.plot(idx[:-2]+1, acc_rev)
+plt.show()
+k = acc_rev.argmax()+2
+print("El número óptimo de cluster es %s"%str(k))
+
+#CONCLUSIÓN: A SIMPLE VISTA PARECIERA QUE HAY QUE HACER 5 CLUSTER, PERO EL MÉTODO DEL CODO INDICA QUE EL ÓPTIMO ES 4, Y JUNTAR 2 GRUPOS..
+
+
+#RECUPERAR CLUSTERS Y SUS ELEMENTOS
+from scipy.cluster.hierarchy import fcluster
+
+max_d = 20
+clusters = fcluster(Z, max_d, criterion = "distance") #INDICA EN QUÉ CLUSTER QUEDA EL DATO DEPENDIENDO EL CRITERIO MÁXIMO..
+
+k = 3
+cluster = fcluster(Z, k, criterion="maxclust") #INDICA EN QUÉ CLUSTER QUEDA EL DATO DEPENDIENDO DE LA CANTIDAD DE CLUSTERS QUE QUIERO..
+
+fcluster(Z, 8, depth=10) #SE LE ENTREGA LA CANTIDAD MÍNIMA DE ELEMENTOS QUE DEBE TENER EL CLUSTER (8) y LA PROFUNDIDAD A MIRAR..
+
+plt.figure(figsize=(10,8))
+plt.scatter(X[:,0], X[:,1], c=cluster, cmap="prism")
+plt.show()
+
+
+
+
+# == CLUSTERING CON K-MEANS ==
+# Hay que elegir antes del análisis la cantidad de clusters, se intenta ir clasificado los datos según los centroides estimados..
+import numpy as np
+
+data = np.random.random(90).reshape(30,3)
+c1 = np.random.choice(range(len(data))) #Se eligen 2 centroides al azar..
+c2 = np.random.choice(range(len(data)))
+clust_centers = np.vstack([data[c1], data[c2]])
+
+from scipy.cluster.vq import vq
+
+vq(data, clust_centers) #Primer arreglo indica la clasificación del dato, en el otro entrega la distancia al centroide del cluster asignado..
+
+from scipy.cluster.vq import kmeans
+
+kmeans(data, clust_centers)
+kmeans(data, 2) #Asigna a la cantidad de clusters elegidos, en vez de tomar los que les dimos..
+
+
+
+# == CLUSTERING CON DATOS DEL DATASET ==
+# Datos de vinos tinto, donde entrega distintas características como la calidad de este..
+import pandas as pd
+import matplotlib.pyplot as plt
+
+RUTA_CLASE_HOME = "D:/Python/Github/Curso UDemy/python-ml-course/datasets"
+df = pd.read_csv(RUTA_CLASE_HOME + "/wine/winequality-red.csv", sep = ";")
+
+plt.hist(df["quality"]) #Ver la cantidad de vinos que tiene cada nota..
+df.groupby("quality").mean() #Tomar las primeras conclusiones y como podrían afectar las variables a la calidad del Vino..
+
+#Normalización de los Datos: Para que tengan pesos similares y no afecte su tamaño..
+df_norm = (df-df.min())/(df.max()-df.min()) 
+
+#Clustering jerárquico con scikit-learn:
+from sklearn.cluster import AgglomerativeClustering
+
+clus = AgglomerativeClustering(n_clusters=6, linkage = "ward").fit(df_norm)
+md_h = pd.Series(clus.labels_) #Para poner las Etiquetas..
+plt.hist(md)
+plt.title("Histograma de los clusters")
+plt.xlabel("Cluster")
+plt.ylabel("Número de vinos del cluster")
+
+clus.children_ #Estructura de los hijos para ver como se arma el árbol
+
+#Clustering con Dendrograma
+from scipy.cluster.hierarchy import dendrogram, linkage
+
+Z = linkage(df_norm, "ward")
+plt.figure(figsize=(25,10))
+plt.title("Dendrograma de los vinos")
+plt.xlabel("ID del vino")
+plt.ylabel("Distancia")
+dendrogram(Z, leaf_rotation=90., leaf_font_size =8.)
+plt.show()
+
+#Clustering con K-Means
+from sklearn.cluster import KMeans
+from sklearn import datasets
+
+model = KMeans(n_clusters = 6) #Indicar la cantidad de clasificaciones
+model.fit(df_norm)
+model.labels_ #Ver en qué grupo queda..
+md_k = pd.Series(model.labels_)
+
+df_norm["clust_h"] = md_h #Podemos ver que tienen a quedar clasificados en el mismo cluster, los "2" pasan a ser "3" del otro grupo..
+df_norm["clust_k"] = md_k
+
+model.cluster_centers_
+model.intertia_ #Suma de los valores al cuadrado..
+
+#Interpretación final:
+df_norm.groupby("clust_k").mean() #Se puede elegir cualquiera de los dos clusters..
+
+
+#Ajustar los parámetros del clustering, o la cantidad de grupos que se van a elegir..
+#2 Métodos: Codo y Silueta
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn import metrics
+from scipy.spatial.distance import cdist
+from sklearn.metrics import silhouette_score, silhouette_samples
+
+x1 = np.array([3,1,1,2,1,6,6,6,5,6,7,8,9,8,9,9,8])
+x2 = np.array([5,4,5,6,5,8,6,7,6,7,1,2,1,2,3,2,3])
+X = np.array(list(zip(x1,x2))).reshape(len(x1),2)
+
+plt.plot()
+plt.xlim([0,10])
+plt.ylim([0,10])
+plt.title("Dataset a clasificar")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.scatter(x1,x2)
+plt.show()
+
+max_k = 10 #Máximo número de iteraciones
+K = range(1,max_k)
+ssw = []
+color_palette = [plt.cm.Spectral(float(i)/max_k) for i in K]
+centroid = [sum(X)/len(X) for i in K]
+sst = sum(np.min(cdist(X, centroid, "euclidean"), axis = 1))
+
+for k in K:
+    kmeanModel = KMeans(n_clusters = k).fit(X)
+    
+    centers = pd.DataFrame(kmeanModel.cluster_centers_) #Centros
+    labels = kmeanModel.labels_ #Etiqueta
+   
+    ssw_k = sum(np.min(cdist(X, kmeanModel.cluster_centers_, "euclidean"), axis = 1)) #Distancia con el centro..
+    ssw.append(ssw_k)
+   
+    label_color = [color_palette[i] for i in labels]
+    
+    #Fabricaremos una silueta para cada cluster.. pero se deja fuera k = 1 y k = len(X)
+    if 1<k<len(X):
+        #Crear un subplot de una fila y dos columnas
+        fig, (axis1,axis2) = plt.subplots(1,2)
+        fig.set_size_inches(20,8)
+        
+        #El primer subplot contendrá la silueta que puede tener valores desde -1 a 1
+        axis1.set_xlim([-0.1, 1.0])
+        #El número de clusters a insertar determinará el tamaño de cada barra, por lo que es importante el coeficiente (n_clusters+1)*10
+        #el que será el espacio en blanco entre los clusters para separarlas..
+        axis1.set_ylim([0, len(X)+(k+1)*10])
+        
+        silhouette_avg = silhouette_score(X, labels)
+        print("* Para k = ",k, " el promedio de la silueta es de: ",silhouette_avg)
+        sample_silhouette_values = silhouette_samples(X, labels)
+        
+        y_lower = 10
+        for i in range(k):
+            #Agregamos la silueta del cluster i-ésimo
+            ith_cluster_sv = sample_silhouette_values[labels == i]
+            print("    - Para i = ",i+1, " la silueta del cluster vale: ", np.mean(ith_cluster_sv))
+            
+            #Ordenamos descendientemente las siluetas del cluster i-ésimo..
+            ith_cluster_sv.sort()
+            
+            #Calculamos donde colocar la primera silueta en el eje vertical
+            ith_cluster_size = ith_cluster_sv.shape[0]
+            y_upper = y_lower + ith_cluster_size
+            
+            #Elegimos el color del cluster
+            color = color_palette[i]
+            
+            #Pintamos la silueta del cluster i-ésimo
+            axis1.fill_betweenx(np.arange(y_lower, y_upper), 0, ith_cluster_sv, facecolor = color, alpha = 0.7)
+            
+            #Etiquetamos dicho cluster con el número en el centro
+            axis1.text(-0.05, y_lower + 0.5*ith_cluster_size, str(i+1))
+            
+            #Calculamos el nuevo y_lower para el siguiente cluster del gráfico
+            y_lower = y_upper + 10 #Este 10 corresponde al del set_ylim... *10 <--
+            
+        axis1.set_title("Representación de la silueta para k = %s"%str(k))
+        axis1.set_xlabel("S(i)")
+        axis1.set_ylabel("ID del Cluster")
+        
+        #Fin de la representación de la silueta
+    
+    #Plot de los K-means con los puntos respectivos
+    plt.plot()
+    plt.xlim([0,10])
+    plt.ylim([0,10])
+    plt.title("Clustering para k = %s"%str(k))
+    plt.scatter(x1,x2, c=label_color)
+    plt.scatter(centers[0], centers[1], c=color_palette, marker = "x") #HAY QUE ARREGLAR EL C, TIRA ERROR......
+    plt.show()
+    
+
+#REPRESENTACIÓN DEL CODO
+plt.plot(K, ssw, "bx-")
+plt.xlabel("k")
+plt.ylabel("SSw(k)")
+plt.title("La técnica del codo para encontrar el k óptimo")
+plt.show()
+
+#REPRESENTACIÓN DEL CODO NORMALIZADO
+plt.plot(K, 1-ssw/sst, "bx-")
+plt.xlabel("k")
+plt.ylabel("1-norm(SSw(k))")
+plt.title("La técnica del codo normalizado para encontrar el k óptimo")
+plt.show()
+
+
+#CLUSTERING POR PROPAGACIÓN DE LA AFINIDAD:
+from sklearn.cluster import AffinityPropagation
+from sklearn import metrics
+from sklearn.datasets._samples_generator import make_blobs
+import matplotlib.pyplot as plt
+from itertools import cycle
+
+centers = [[1,1], [-1,-1], [1,-1]]
+X, labels = make_blobs(n_samples = 300, centers = centers, cluster_std=0.5, random_state=0)
+
+plt.scatter(X[:,0], X[:,1], c = labels, s= 10, cmap="autumn") #EL "s" ES PARA EL TAMAÑO DE LOS PUNTOS..
+
+'''
+af = AffinityPropagation(preference=-50).fit(X)
+cluster_center_ids = af.cluster_centers_indices_
+labels = af.labels_
+n_clust = len(cluster_center_ids)
+SE DEJÓ DENTRO DE LA FUNCIÓN..
+'''
+
+def report_affinity_propagation(X):
+    af = AffinityPropagation(preference=-50).fit(X)
+    cluster_center_ids = af.cluster_centers_indices_
+    clust_labels = af.labels_
+    n_clust = len(cluster_center_ids)
+    
+    print("Número estimado de clusters: %d"%n_clust)
+    print("Homogeneidad: %0.3f"%metrics.homogeneity_score(labels, clust_labels))
+    print("Completitud: %0.3f"%metrics.completeness_score(labels, clust_labels))
+    print("V-measure: %0.3f"%metrics.v_measure_score(labels, clust_labels))
+    print("R2 ajustado: %0.3f"%metrics.adjusted_rand_score(labels, clust_labels))
+    print("Información mútua ajustada: %0.3f"%metrics.adjusted_mutual_info_score(labels, clust_labels))
+    print("Coeficiente de la silueta: %0.3f"%metrics.silhouette_score(X, labels, metric="sqeuclidean"))
+
+    plt.figure(figsize=(16,9))
+    plt.clf()
+    
+    colors = cycle('bgrcmykbgrcmykbgrcmykbgrcmyk')
+    for k, col in zip(range(n_clust), colors):
+        class_members = (clust_labels == k)
+        clust_center = X[cluster_center_ids[k]]
+        plt.plot(X[class_members, 0], X[class_members, 1], col + '.')
+        plt.plot(clust_center[0], clust_center[1], 'o', markerfacecolor = col, markeredgecolor='k', markersize=14)
+        for x in X[class_members]:
+            plt.plot([clust_center[0], x[0]], [clust_center[1], x[1]], col)
+        
+    plt.title("Número estimado de clusters %d"%n_clust)
+    plt.show()
+        
+report_affinity_propagation(X)
+
+
+# DISTRIBUCIONES EN FORMA DE ANILLO
+from math import sin, cos, radians, pi, sqrt
+import numpy.random as rnd
+import numpy as np
+import matplotlib.pyplot as plt
+
+def ring(r_min = 0, r_max = 1, n_samples = 360):
+    angle = rnd.uniform(0,2*pi, n_samples)
+    distance = rnd.uniform(r_min, r_max, n_samples)
+    data = []
+    for a,d in zip(angle,distance):
+        data.append([d*cos(a), d*sin(a)]) #También se puede usar la raíz cuadrada de las distancias para que queden más cerca
+
+    return np.array(data)
+
+data1 = ring(3,5)
+data2 = ring(24,27)
+
+data = np.concatenate([data1, data2], axis = 0)
+labels = np.concatenate([[0 for i in range(0,len(data1))], [1 for i in range(0, len(data2))]])
+
+plt.scatter(data[:,0], data[:,1], c=labels, s=5, cmap = "autumn")
+
+#ALGORITMNO CON KMEANS..
+from sklearn.cluster import KMeans
+
+km = KMeans(2).fit(data)
+clust = km.predict(data)
+plt.scatter(data[:,0], data[:,1], c= clust, s=5, cmap = "autumn") 
+#Acá nos damos cuenta que KMeans no puede clasificar como anillos, intenta hacer círculos de acuerdo a las distancias de los puntos..
+
+
+#PARA SOLUCIONAR LO ANTERIOR VAMOS A UTILIZAR K-MEDOIDES
+from pyclust import KMedoids #pip install pyclust, pip install treelib
+
+kmed = KMedoids(2).fit_predict(data)
+plt.scatter(data[:,0], data[:,1], c=kmed, s=5, cmap="autumn")
+
+#Podemos concluir que no nos sirve KMedoids, no hay mejoras en la separación de clusters..
+
+#ALGORITMO DEL CLUSTERING ESPECTRAL:
+#Utiliza un algoritmo de acuerdo a una fórmula de distancias exponenciales, y arma un espectro para llegar al mejor resultado..
+from sklearn.cluster import SpectralClustering
+
+clust = SpectralClustering(2).fit_predict(data)
+plt.scatter(data[:,0], data[:,1], c=clust, s=5, cmap="autumn")
+
+'''
+Queda mucho mejor el cluster, pero lamentablemente no se puede determinar la K.
+Siempre tendremos que empezar con propagación para revisar la cantidad de K a usar..
+
+*Podemos estimar la k?
+    *NO: Podemos utilizar propagación de la afinidad
+    *SI: Podemos utilizar la distancia Euclídea?
+        *SI: Utilizar K-Medoides
+        *NO: Los datos son linealmente separables?
+            *SI: Utilizar Clustering Aglomerativo
+            *NO: Utilizar Clustering Espectral
+'''
+
+
+
+
+
+
+# ============== SECCIÓN 10 ==================
+
+# === ÁRBOLES DE DECISIÓN ====
+'''
+Árbol de decisión se utiliza cuando la respuesta es categórica/discreta y se puede clasificar.
+Bosques aleatorios, para juntar varios árboles de decisión y mejorar la conclusión.
+Entropía: número mínimo de bits para codificar una clasificación.
+Algoritmo ID3: buscar la máxima entropia (nula) y repetir este paso hasta llegar al mejor resultado.
+Índice de Gini: funciona cuando las respuestas son binarias. Se busca el valor más alto.
+Reducción de la varianza: Buscar la menor posible, ya que tiene los datos más concentrados.
+Poda del árbol: definir nivel de error y eliminar ramas hasta llegar al objetivo.
+'''
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+
+RUTA_CLASE_HOME = "D:/Python/Github/Curso UDemy/python-ml-course/datasets"
+data = pd.read_csv(RUTA_CLASE_HOME + "/iris/iris.csv")
+
+colnames = data.columns.values.tolist()
+predictors = colnames[:4]
+target = colnames[4]
+
+data["is_train"] = np.random.uniform(0,1, len(data))<=0.75 #Generar distribución uniforme entre 0 y 1, y asignar una parte para para pruebas y otras para trabajar
+train, test = data[data["is_train"]==True], data[data["is_train"]==False] #Asignar los datos a las distintas variables
+              
+tree = DecisionTreeClassifier(criterion="entropy", min_samples_split=20, random_state=99) #min_sample_leaf es para indicar que los nodos no tengan menos de X elementos
+tree.fit(train[predictors], train[target])                   
+
+preds = tree.predict(test[predictors])
+pd.crosstab(test[target], preds, rownames = ["Actual"], colnames = ["Predictions"]) #Hay 2 que se clasificaron mal, las que están distintas en la tabla..
+
+
+# VISUALIZACIÓN DEL ARBOL DE DECISIÓN:
+from sklearn.tree import export_graphviz
+with open("resources/iris_dtree.dot", "w") as dotfile: #HAY QUE ARREGLAR DONDE SE ENCUENTRA EL FICHERO..
+    export_graphviz(tree, out_file=dotfile, feature_names=predictors)
+    dotfile.close()
+
+import os
+from graphviz import Source #conda install graphviz
+
+file = open("resources/iris_dtree.dot", "r")
+text = file.read()
+Source(text)
+
+
+# TÉCNICA DE VALIDACIÓN CRUZADA / CROSS VALIDATION PARA LA PODA
+X = data[predictors]
+Y = data[target]
+tree = DecisionTreeClassifier(criterion="entropy", max_depth = 5, min_samples_split = 20, random_state = 99)
+tree.fit(X,Y)
+
+from sklearn.model_selection import KFold
+cv = KFold( n_splits=10, shuffle = True, random_state=1) 
+
+from sklearn.model_selection import cross_val_score
+score = np.mean(cross_val_score(tree, X, Y, scoring="accuracy", cv = cv, n_jobs=1))
+print(score) #SCORE DE 0,9333
+
+for i in range(1,11):
+    tree = DecisionTreeClassifier(criterion="entropy", max_depth = i, min_samples_split = 20, random_state = 99)
+    tree.fit(X,Y)
+    cv = KFold( n_splits=10, shuffle = True, random_state=1) 
+    scores = cross_val_score(tree, X, Y, scoring="accuracy", cv = cv, n_jobs=1)
+    score = np.mean(scores)
+    print("Score para i =",i, "es de ", score)
+    print("   ", tree.features_importances_)
+#SE PUEDE CONCLUIR QUE EL MÁXIMO SE ALCANZA EN PROFUNDIDAD 3, Y SOBRE ESTO SE MANTIENE CONSTANTE EN 0,933
+#DENTRO DE LOS RESULTADOS DE features, INDICA QUE predictors[2] (Petal.Length) ES LA MÁS IMPORTANTE, seguido por el último..
