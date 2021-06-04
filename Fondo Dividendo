@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
+
+
 import pandas as pd
 import numpy as np
 
 
 # ==================== IMPORTAR DATOS ===========================
 
-RUTA_PC = 'D:/Python/BICE/Fondo Dividendo.xlsx'
+RUTA_PC = 'C:/Users/jfones/Desktop/Python - CS50/Anaconda/BICE/Fondo Dividendo.xlsx'
 
 dfMarketCap = pd.read_excel(RUTA_PC, sheet_name = "Market Cap")
 dfSonIGPA = pd.read_excel(RUTA_PC, sheet_name = "Son IGPA")
@@ -85,33 +88,35 @@ elif Elegir == 1:
 #ESTO CONTIENE LA TABLA QUE CUMPLE CON LOS REQUISITOS ANTERIORES, Y SIRVE PARA CALCULAR EL RETORNO
 TablaFinal = pd.DataFrame()
 for i in dfDivYield.columns.values:
-    TablaFinal = pd.concat([TablaFinal,pd.DataFrame({i: dfIGPAWeight[i]/SumasDiv[i-2014]*dfDivYieldPonderador[i-1]})], axis = 1)
+    TablaFinal = pd.concat([TablaFinal,pd.DataFrame({i: DatoWeight[i]/SumasDiv[i-2014]*dfDivYieldPonderador[i-1]})], axis = 1)
 TablaFinal = TablaFinal.fillna(0)
 
 
 
 #ESTO ES PARA REDISTRIBUIR EL EXCESO EN LA PONDERACIÓN, CUANDO UN EMISOR QUEDA PONDERANDO SOBRE EL 20%
+PosiciónMáxima = 0.2
 for i in TablaFinal.columns.values:
-    i = 2016
-    if TablaFinal[i].max() > 0.2:
-        print("Entró al primer if..")
+    #i = 2016
+    if TablaFinal[i].max() > PosiciónMáxima:
+        #print("Entró al primer if..")
         for x in range(0,len(TablaFinal[i])):
-            if TablaFinal[i][x] > 0.2:
-                print("Encontró el valor mayor a 0.2, correspondiente a: ", TablaFinal[i][x])
-                Distribuir = (TablaFinal[i][x]-0.2)/dfDivYieldPonderador[i-1].sum()
-                print("Valor a distribuir es el siguiente: ", Distribuir)
-                TablaFinal[i][x] = 0.2
+            TablaFinal.sort_values(by=i, ascending = False)
+            if TablaFinal[i][x] > PosiciónMáxima:
+                #print("Encontró el valor mayor a 0.2, correspondiente a: ", TablaFinal[i][x])
+                Distribuir = (TablaFinal[i][x]-PosiciónMáxima)/dfDivYieldPonderador[i-1].sum()
+                #print("Valor a distribuir es el siguiente: ", Distribuir)
+                TablaFinal[i][x] = PosiciónMáxima
                 for y in range(0,len(TablaFinal[i])):
-                    print("Entró al segundo For..")
-                    if TablaFinal[i][y] > 0 and y != x:
+                    #print("Entró al segundo For..")
+                    if TablaFinal[i][y] > 0 and TablaFinal[i][y] < PosiciónMáxima and y != x:
                         TablaFinal[i][y] = TablaFinal[i][y] + Distribuir
-                    
+    TablaFinal.sort_index()         
 
 
 
 Retornos = [] #OBTENER LOS RESULTADOS DEL IGPA, FILA 6 (COLUMNAS CD:CJ) Y LO QUE VA EN LA SALIDA..
 for i in dfDivYield.columns.values:
-    Retornos.append(sum((dfIGPAWeight[i]/SumasDiv[i-2014])*dfDivYieldPonderador[i-1]*dfTR_Con_Div[i]))
+    Retornos.append(sum(TablaFinal*dfTR_Con_Div[i]))
 
 
 '''
